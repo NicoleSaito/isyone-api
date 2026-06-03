@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.database import init_db
 from routers import scripts, admin, logs
+from fastapi.responses import FileResponse
 
 app = FastAPI(
     title="IsyShell — Isy.one Automation API",
@@ -50,6 +51,10 @@ def root():
         "status": "online",
         "docs": "/docs",
     }
+
+@app.get("/dashboard", tags=["Status"])
+def dashboard():
+    return FileResponse("dashboard.html")
 
 
 @app.get("/health", tags=["Status"])
