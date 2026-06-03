@@ -1,25 +1,28 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import clients, users, infra
+from core.database import init_db
+from routers import scripts, admin, logs
 
 app = FastAPI(
-    title="Isy.one Automation API",
+    title="IsyShell — Isy.one Automation API",
     description="""
-## API de Automação — Isy.one
+## IsyShell — Orquestrador Automático de Infraestrutura
 
-Expõe scripts bash de provisionamento e gerenciamento de clientes via endpoints REST.
+API RESTful segura para execução de scripts bash via HTTP, com autenticação por token, logs de auditoria e administração dinâmica.
 
-### Funcionalidades
-- **Clientes**: provisionar e desprovisionar ambientes de clientes
-- **Usuários Linux**: criar usuários no sistema operacional
-- **Infraestrutura**: gerenciar serviços e regras de firewall
+### Autenticação
+Todas as rotas exigem o header **`X-Isy-Token`** com o token válido.
 
-### Como funciona
-Cada endpoint recebe parâmetros JSON, valida os dados e executa o script bash correspondente no servidor Linux, retornando o resultado em formato JSON.
+Token padrão para testes: `544c5787-613a-4ac2-8e61-9e6486f8d74a`
+
+### Pilares implementados
+- **API RESTful** com FastAPI e subprocess
+- **Segurança** com X-Isy-Token e sanitização contra command injection
+- **Administração** de scripts e token dinâmico
+- **Logs e auditoria** persistidos em SQLite
+- **Docker** com imagem leve python:3.11-slim
     """,
-    version="1.0.0",
-    contact={"name": "Isy.one", "url": "https://isyone.com.br"},
-    license_info={"name": "MIT"},
+    version="2.0.0",
 )
 
 app.add_middleware(
@@ -29,21 +32,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(clients.router)
-app.include_router(users.router)
-app.include_router(infra.router)
+app.include_router(scripts.router)
+app.include_router(admin.router)
+app.include_router(logs.router)
 
 
-@app.get("/", tags=["Status"], summary="Health check")
+@app.on_event("startup")
+def startup():
+    init_db()
+
+
+@app.get("/", tags=["Status"])
 def root():
     return {
+        "app": "IsyShell — Isy.one Automation API",
+        "version": "2.0.0",
         "status": "online",
-        "app": "Isy.one Automation API",
-        "version": "1.0.0",
         "docs": "/docs",
     }
 
 
-@app.get("/health", tags=["Status"], summary="Verificar saúde da API")
+@app.get("/health", tags=["Status"])
 def health():
     return {"status": "healthy"}
